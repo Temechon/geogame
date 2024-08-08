@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+// Font awesome
+$fa-font-path: '@fortawesome/fontawesome-free/webfonts';
+@import "@fortawesome/fontawesome-free/scss/fontawesome";
+@import "@fortawesome/fontawesome-free/scss/solid";
+
 html,
 body {
     width: 100%;
