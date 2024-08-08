@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
 import { config, Map } from '@maptiler/sdk';
 
 import '@maptiler/sdk/dist/maptiler-sdk.css';
@@ -9,6 +9,9 @@ import { first } from 'rxjs';
 interface CountryInfo {
   name: string;
   flag: string;
+  population: number;
+  capitalInfo: [lat: number, long: number];
+
 }
 @Component({
   selector: 'maptiler',
@@ -27,16 +30,18 @@ export class MaptilerComponent {
   @ViewChild('map')
   private mapContainer!: ElementRef<HTMLElement>;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private changeDetector: ChangeDetectorRef) { }
 
 
   ngOnInit(): void {
     config.apiKey = 'iSxzLuMQ4PQGPwqvdWzS';
+  }
+  ngAfterViewInit() {
     this.loadCountryData();
   }
 
-  ngAfterViewInit() {
-    const initialState = { lng: 0, lat: 0, zoom: 0 };
+  loadMap() {
+    const initialState = { lng: 15, lat: 35, zoom: 1.8 };
 
     this.map = new Map({
       container: this.mapContainer.nativeElement,
@@ -79,7 +84,7 @@ export class MaptilerComponent {
         // Détection des clics sur les pays
         this.map.on('click', 'country-fill', (e: any) => {
           const countryName = e.features[0].properties.name;
-          console.log(e.features[0].properties.ADMIN);
+          console.log(e);
 
           const countryISO3 = e.features[0].properties.ISO_A3;  // Récupérer le code ISO3 du pays cliqué
           const countryInfo = this.countriesMap[countryISO3];
@@ -105,16 +110,32 @@ export class MaptilerComponent {
 
   loadCountryData() {
     this.isLoading = true;
-    this.http.get<any[]>('https://restcountries.com/v3.1/all?fields=translations,flags,cca3').pipe(first())
+    this.http.get<any[]>('https://restcountries.com/v3.1/all?fields=translations,flags,cca3,capitalInfo,population').pipe(first())
       .subscribe(data => {
         data.forEach(country => {
           const iso3 = country.cca3;  // Code ISO3
           const nameFr = country.translations?.fra?.common || country.name.common; // Nom en français
           const flagUrl = country.flags?.png || ''; // Drapeau
-          this.countriesMap[iso3] = { name: nameFr, flag: flagUrl };
+          const population = country.population || 0;
+          const capitalInfo = country.capitalInfo || [0, 0];
+          this.countriesMap[iso3] = { name: nameFr, flag: flagUrl, population, capitalInfo };
         });
+
+        // Trier les pays après avoir chargé les données
+        this.sortCountriesByPopularity();
+
         this.isLoading = false;
+        this.changeDetector.detectChanges();
+        this.loadMap();
       });
+  }
+  sortCountriesByPopularity() {
+    const sortedCountries = Object.values(this.countriesMap).sort((a, b) => {
+      return b.population - a.population; // Tri décroissant
+    });
+
+    console.log('Pays triés par population :', sortedCountries);
+    // Vous pouvez utiliser sortedCountries comme vous le souhaitez
   }
 
 }
