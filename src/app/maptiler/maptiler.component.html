@@ -1,5 +1,17 @@
 @if (isLoading) { <spinner>
 </spinner>
 } @else {
+<div class="w-full text-center py-6 absolute left-1/2 -translate-x-1/2 z-10 bg-opacity-20 bg-white select-none">
+
+    <h1 class="text-xl mb-2">Où c'est qu'il est ce pays ?</h1>
+    <div class="flex items-center justify-center space-x-4">
+        <span class="text-4xl">{{ randomCountry?.name }}</span>
+        @if (randomCountry?.flag) {
+        <img [src]="randomCountry?.flag" alt="Drapeau de {{ randomCountry?.name }}" class="inline-block w-14">
+        }
+    </div>
+</div>
+
+
 <div class="w-full h-full" #map></div>
 }
