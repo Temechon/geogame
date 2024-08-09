@@ -10,6 +10,7 @@ interface CountryInfo {
   name: string;
   flag: string;
   population: number;
+  capital: string;
   capitalInfo: [lat: number, long: number];
 
 }
@@ -110,15 +111,16 @@ export class MaptilerComponent {
 
   loadCountryData() {
     this.isLoading = true;
-    this.http.get<any[]>('https://restcountries.com/v3.1/all?fields=translations,flags,cca3,capitalInfo,population').pipe(first())
+    this.http.get<any[]>('https://restcountries.com/v3.1/all?fields=translations,flags,cca3,capitalInfo,population,capital').pipe(first())
       .subscribe(data => {
         data.forEach(country => {
           const iso3 = country.cca3;  // Code ISO3
           const nameFr = country.translations?.fra?.common || country.name.common; // Nom en français
           const flagUrl = country.flags?.png || ''; // Drapeau
           const population = country.population || 0;
+          const capital = country.capital || '';
           const capitalInfo = country.capitalInfo || [0, 0];
-          this.countriesMap[iso3] = { name: nameFr, flag: flagUrl, population, capitalInfo };
+          this.countriesMap[iso3] = { name: nameFr, flag: flagUrl, population, capitalInfo, capital };
         });
 
         // Trier les pays après avoir chargé les données
