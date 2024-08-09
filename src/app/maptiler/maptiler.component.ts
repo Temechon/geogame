@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
-import { config, Map } from '@maptiler/sdk';
+import { config, Map, Source } from '@maptiler/sdk';
 
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { SpinnerComponent } from '../spinner/spinner.component';
@@ -23,9 +23,12 @@ interface CountryInfo {
 export class MaptilerComponent {
   map: Map;
 
-  countriesMap: { [iso3: string]: CountryInfo } = {}; // Stockage des données des pays par code ISO3
+  // Stockage des données des pays par code ISO3
+  countriesMap: { [iso3: string]: CountryInfo } = {};
 
   isLoading = true;
+
+  clicked: Array<any> = [];
 
   @ViewChild('map')
   private mapContainer!: ElementRef<HTMLElement>;
@@ -81,11 +84,32 @@ export class MaptilerComponent {
           }
         });
 
+
+        // Ajoutez une couche pour le pays sélectionné
+        this.map.addSource('selected-country', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: []
+          }
+        });
+
+        this.map.addLayer({
+          id: 'selected-country-fill',
+          type: 'fill',
+          source: 'selected-country',
+          layout: {},
+          paint: {
+            'fill-color': '#ff0000', // Rouge pour le pays sélectionné
+            'fill-opacity': 0.7
+          }
+        });
+
         // Détection des clics sur les pays
         this.map.on('click', 'country-fill', (e: any) => {
-          const countryName = e.features[0].properties.name;
           console.log(e);
 
+          const selectedFeature = e.features[0];
           const countryISO3 = e.features[0].properties.ISO_A3;  // Récupérer le code ISO3 du pays cliqué
           const countryInfo = this.countriesMap[countryISO3];
 
@@ -94,6 +118,16 @@ export class MaptilerComponent {
           } else {
             alert("Informations sur le pays introuvables.");
           }
+
+          // Mettez à jour la couche avec le pays sélectionné
+          console.log(selectedFeature);
+          this.clicked.push(selectedFeature)
+
+          const s = this.map.getSource('selected-country') as any;
+          s.setData({
+            type: 'FeatureCollection',
+            features: this.clicked
+          });
         });
 
         // Changer le curseur au survol pour indiquer l'interactivité
