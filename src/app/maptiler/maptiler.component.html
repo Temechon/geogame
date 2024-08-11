@@ -5,9 +5,10 @@
 
     <h1 class="text-xl mb-2">Où c'est qu'il est ce pays ?</h1>
     <div class="flex items-center justify-center space-x-4">
-        <span class="text-4xl">{{ randomCountry?.name }}</span>
-        @if (randomCountry?.flag) {
-        <img [src]="randomCountry?.flag" alt="Drapeau de {{ randomCountry?.name }}" class="inline-block w-14">
+        <span class="text-4xl">{{ countriesToGuess[randomCountry]?.name }}</span>
+        @if (countriesToGuess[randomCountry]?.flag) {
+        <img [src]="countriesToGuess[randomCountry]?.flag" alt="Drapeau de {{ countriesToGuess[randomCountry]?.name }}"
+            class="inline-block w-14">
         }
     </div>
 </div>

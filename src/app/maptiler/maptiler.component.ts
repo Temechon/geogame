@@ -1,12 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
-import { config, helpers, Map, Popup, Source } from '@maptiler/sdk';
+import { config, helpers, Map } from '@maptiler/sdk';
 
 import '@maptiler/sdk/dist/maptiler-sdk.css';
-import { SpinnerComponent } from '../spinner/spinner.component';
 import { first } from 'rxjs';
+import { SpinnerComponent } from '../spinner/spinner.component';
+import { level1 } from '../countries/level1';
 
 interface CountryInfo {
+  code: string;
   name: string;
   flag: string;
   population: number;
@@ -27,9 +29,11 @@ export class MaptilerComponent {
   // Stockage des données des pays par code ISO3
   countriesMap: { [iso3: string]: CountryInfo } = {};
 
+  countriesToGuess: Array<CountryInfo> = [];
+
   isLoading = true;
 
-  randomCountry: CountryInfo;
+  randomCountry: number = 0;
 
   @ViewChild('map')
   private mapContainer!: ElementRef<HTMLElement>;
@@ -110,9 +114,6 @@ export class MaptilerComponent {
 
         // Détection des clics sur les pays
         this.map.on('click', 'country-fill', (e: any) => {
-          const selectedFeature = e.features[0];
-          console.log("click", e);
-
           const countryISO3 = e.features[0].properties.ISO_A3;  // Récupérer le code ISO3 du pays cliqué
           const countryInfo = this.countriesMap[countryISO3];
           console.log(countryInfo);
@@ -124,16 +125,32 @@ export class MaptilerComponent {
           //   type: 'FeatureCollection',
           //   features: this.clicked
           // });
+          if (countryISO3 === this.countriesToGuess[this.randomCountry].code) {
 
-          // Find the whole geometry of the country
-          const country = geojsonData.features.filter(feature => feature.properties.ISO_A3 === countryISO3)
-          console.log("found", country[0]);
 
-          helpers.addPolygon(this.map, {
-            data: country[0],
-            fillColor: "#13678A",
-            fillOpacity: 0.75
-          } as any);
+            // Find the whole geometry of the country
+            const country = geojsonData.features.filter(feature => feature.properties.ISO_A3 === countryISO3)
+            console.log("found", country[0]);
+
+            helpers.addPolygon(this.map, {
+              data: country[0],
+              fillColor: "#13678A",
+              fillOpacity: 0.75
+            } as any);
+
+            this.randomCountry++;
+
+          } else {
+            const countryToFind = this.countriesToGuess[this.randomCountry];
+            console.log("Country to find", countryToFind);
+
+            this.map.flyTo({
+              center: countryToFind.capitalInfo,
+              zoom: 3
+
+            })
+            this.randomCountry++
+          }
         });
 
         // Changer le curseur au survol pour indiquer l'interactivité
@@ -145,7 +162,10 @@ export class MaptilerComponent {
           this.map.getCanvas().style.cursor = '';
         });
 
-        this.randomCountry = this.pickRandomCountry()
+        this.fetchLevel(level1);
+
+        this.randomCountry = 0
+
       });
 
     });
@@ -161,12 +181,9 @@ export class MaptilerComponent {
           const flagUrl = country.flags?.png || ''; // Drapeau
           const population = country.population || 0;
           const capital = country.capital || '';
-          const capitalInfo = country.capitalInfo.latlng || [0, 0];
-          this.countriesMap[iso3] = { name: nameFr, flag: flagUrl, population, capitalInfo, capital };
+          const capitalInfo = country.capitalInfo.latlng.reverse() || [0, 0];
+          this.countriesMap[iso3] = { name: nameFr, flag: flagUrl, population, capitalInfo, capital, code: iso3 };
         });
-
-        // Trier les pays après avoir chargé les données
-        this.sortCountriesByPopularity();
 
         // Load map
         this.isLoading = false;
@@ -174,21 +191,21 @@ export class MaptilerComponent {
         this.loadMap();
       });
   }
-  sortCountriesByPopularity() {
-    const sortedCountries = Object.values(this.countriesMap).sort((a, b) => {
-      return b.population - a.population; // Tri décroissant
-    });
 
-    console.log('Pays triés par population :', sortedCountries);
+  // Associe chaque pays à trouver avec les countryinfo de restCountries
+  fetchLevel(level: Array<{ code: string, name: string }>) {
+    for (let country of level) {
+      const data = this.countriesMap[country.code];
+      if (data) {
+        this.countriesToGuess.push(data)
+      } else {
+        console.warn("No data for ", country.name);
+      }
+    }
   }
 
   pickRandomCountry() {
-    const countryKeys = Object.keys(this.countriesMap);
-    const randomKey = countryKeys[Math.floor(Math.random() * countryKeys.length)];
-    const randomCountry = this.countriesMap[randomKey];
-    // Supprime le pays sélectionné de la liste
-    delete this.countriesMap[randomKey];
-    return randomCountry;
+    return this.countriesToGuess.pop();
   }
 
 }
